@@ -11,6 +11,10 @@ var rabbitConn *amqp.Connection
 var rabbitCh *amqp.Channel
 var rabbitErrCh chan *amqp.Error
 
+const rabbitConnStr = "amqp://rabbitmq:rabbitmq@localhost:5672/" // can be arg/option
+const rabbitExchange = ""                                        // can be arg/option
+const rabbitQueueName = "hello"                                  // can be arg/option
+
 func main() {
 	defer closePreviousRabbit()
 
@@ -32,7 +36,7 @@ func main() {
 
 			var err error
 
-			rabbitConn, err = amqp.Dial("amqp://rabbitmq:rabbitmq@localhost:5672/")
+			rabbitConn, err = amqp.Dial(rabbitConnStr)
 			if nil != err {
 				log.Printf("Failed to connect to RabbitMQ: %v", err)
 				continue
@@ -60,12 +64,12 @@ func main() {
 				time.Sleep(5 * time.Second)
 			} else {
 				q, err := rabbitCh.QueueDeclare(
-					"hello", // name
-					false,   // durable
-					false,   // delete when unused
-					false,   // exclusive
-					false,   // no-wait
-					nil,     // arguments
+					rabbitQueueName, // name
+					false,           // durable
+					false,           // delete when unused
+					false,           // exclusive
+					false,           // no-wait
+					nil,             // arguments
 				)
 				if nil != err {
 					log.Printf("Queue Declare error: %v", err)
@@ -74,10 +78,10 @@ func main() {
 					continue
 				}
 				err = rabbitCh.Publish(
-					"",     // exchange
-					q.Name, // routing key
-					false,  // mandatory
-					false,  // immediate
+					rabbitExchange, // exchange
+					q.Name,         // routing key
+					false,          // mandatory
+					false,          // immediate
 					amqp.Publishing{
 						ContentType: "text/plain",
 						Body:        []byte(body),
