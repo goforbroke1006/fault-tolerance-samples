@@ -12,14 +12,7 @@ var rabbitCh *amqp.Channel
 var rabbitErrCh chan *amqp.Error
 
 func main() {
-	defer func() {
-		if nil != rabbitConn {
-			rabbitConn.Close()
-		}
-		if nil != rabbitCh {
-			rabbitCh.Close()
-		}
-	}()
+	defer closePreviousRabbit()
 
 	done := make(chan bool)
 	rabbitErrCh = make(chan *amqp.Error)
@@ -30,13 +23,10 @@ func main() {
 			if nil != amqpErr {
 				log.Println("Error chan:", amqpErr)
 			} else {
-				close(rabbitErrCh)
+				closePreviousRabbit()
 			}
 
 			rabbitErrCh = make(chan *amqp.Error)
-
-			rabbitConn = nil
-			rabbitCh = nil
 
 			log.Println("try reconnect")
 
@@ -54,7 +44,6 @@ func main() {
 				log.Printf("Failed to open a channel: %v", err)
 				continue
 			}
-			//rabbitCh.NotifyClose(rabbitErrCh)
 
 			log.Println("connection was opened")
 		}
@@ -63,7 +52,7 @@ func main() {
 	body := "Hello World!"
 	counter := 0
 
-	go func() { // rabbitConn *amqp.Connection, rabbitCh *amqp.Channel, rabbitQueue *amqp.Queue
+	go func() {
 		for {
 			if nil == rabbitConn || nil == rabbitCh {
 				log.Println("connection is not ready")
@@ -107,7 +96,7 @@ func main() {
 
 			}
 		}
-	}() // rabbitConn, rabbitCh, rabbitQueue
+	}()
 
 	rabbitErrCh <- nil
 
@@ -115,8 +104,14 @@ func main() {
 
 }
 
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Fatalf("%s: %s", msg, err)
+func closePreviousRabbit() {
+	if nil != rabbitConn {
+		rabbitConn.Close()
 	}
+	if nil != rabbitCh {
+		rabbitCh.Close()
+	}
+
+	rabbitConn = nil
+	rabbitCh = nil
 }
